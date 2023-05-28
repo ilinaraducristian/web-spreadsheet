@@ -1,0 +1,4 @@
+#spreadsheet {
+    display: grid;
+    grid-template-columns: 2em repeat(var(--column-count, 1), 6em);
+}
