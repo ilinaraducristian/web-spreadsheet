@@ -58,8 +58,9 @@ function cellOnKeyUp(event) {
     if (!event.code.includes('Enter')) return;
     const target = getCellElementByEvent(event);
     if (target === null) return;
-    const [cellColumn, cellRow] = target.id.split(":");
-    document.getElementById(`${cellColumn}:${parseInt(cellRow) + 1}`)?.focus();
+    const match = target.id.match(/[A-Z]+|[0-9]+/g);
+    if (match === null) return;
+    getCellElementById(`${match[0]}${parseInt(match[1]) + 1}`)?.focus();
 }
 
 /**
@@ -67,12 +68,12 @@ function cellOnKeyUp(event) {
  * @returns {string}
  */
 function processInputFormula(input) {
-    if (input.charAt(0) !== "=") return input;
+    if (!input.startsWith("=")) return input;
     let formula = input.substring(1);
-    formula = formula.replace(/[A-Z]+:[0-9]+/g, (cellId) => {
+    formula = formula.replace(/[A-Z]+[0-9]+/g, (cellId) => {
         const cell = getCellElementById(cellId);
         if (cell === null) return cellId;
-        return cell.value;
+        return cell.value || "0";
     });
     try {
         return eval(formula);

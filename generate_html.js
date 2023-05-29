@@ -31,7 +31,7 @@ for (let j = 1; j <= numberOfLines; j++) {
     html += '\n        ';
     html += `<button type="button" id="${j}" onclick="rowButtonOnClick(event)">${j}</button>`;
     for (let i = charACode; i <= charZCode; i++) {
-        const cellId = `${String.fromCharCode(i)}:${j}`;
+        const cellId = `${String.fromCharCode(i)}${j}`;
         html += `<input type="text" id="${cellId}" onfocus="cellOnFocus(event)" onfocusout="cellOnFocusLost(event)" onkeyup="cellOnKeyUp(event)">`;
     }
 }
