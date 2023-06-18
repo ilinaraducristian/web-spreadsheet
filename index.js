@@ -1,99 +1,133 @@
 //@ts-check
 "use strict";
 
-/**
- * @type {Map<string, string>}
- */
-const cellsContent = new Map();
-
-/**
- * @param {MouseEvent} event 
- */
-function rowButtonOnClick(event) {
-    const target = /** @type {HTMLButtonElement} */ (event.target);
-    throw new Error('Method not implemented');
-}
-
-/**
- * @param {MouseEvent} event 
- */
-function columnButtonOnClick(event) {
-    const target = /** @type {HTMLButtonElement} */ (event.target);
-    throw new Error('Method not implemented');
-}
-
-/**
- * @param {FocusEvent} event
- */
-function cellOnFocus(event) {
-    const target = getCellElementByEvent(event);
-    if (target === null) return;
-    const cellContent = cellsContent.get(target.id);
-    if (cellContent === undefined) return;
-    target.value = cellContent;
-}
-
-/**
- * @param {FocusEvent} event
- */
-function cellOnFocusLost(event) {
-    const target = getCellElementByEvent(event);
-    if (target === null) return;
-    if (target.value.trim().length === 0) {
-        cellsContent.delete(target.id);
-        return;
+class Either {
+    #value;
+    constructor(value) {
+        this.#value = value;
     }
-    cellsContent.set(target.id, target.value);
-    Array.from(cellsContent.entries()).forEach(([cellId, cellValue]) => {
-        const cellElement = getCellElementById(cellId);
-        if (cellElement === null) return;
-        cellElement.value = processInputFormula(cellValue);
-    });
-}
-
-/**
- * @param {KeyboardEvent} event
- */
-function cellOnKeyUp(event) {
-    if (!event.code.includes('Enter')) return;
-    const target = getCellElementByEvent(event);
-    if (target === null) return;
-    const match = target.id.match(/[A-Z]+|[0-9]+/g);
-    if (match === null) return;
-    getCellElementById(`${match[0]}${parseInt(match[1]) + 1}`)?.focus();
-}
-
-/**
- * @param {string} input
- * @returns {string}
- */
-function processInputFormula(input) {
-    if (!input.startsWith("=")) return input;
-    let formula = input.substring(1);
-    formula = formula.replace(/[A-Z]+[0-9]+/g, (cellId) => {
-        const cell = getCellElementById(cellId);
-        if (cell === null) return cellId;
-        return cell.value || "0";
-    });
-    try {
-        return eval(formula);
-    } catch (e) {
-        return input;
+    getValue() {
+        return this.#value;
     }
 }
 
+class Left extends Either { }
+
+class Right extends Either { }
+
+const ERRORS = {
+    MISSING_TABLE_HEADER_ROW: 'the table header row element is missing',
+    MISSING_TABLE_BODY: 'the table body is missing'
+};
+
+window.onload = () => {
+    const result = createTable();
+    if (result instanceof Left) {
+        console.error(result.getValue());
+    }
+};
+
 /**
- * @param {string} cellId
- * @return {HTMLInputElement | null}
+ * @returns {Either}
  */
-function getCellElementById(cellId) {
-    return /** @type {HTMLInputElement | null} */ (document.getElementById(cellId));
+function createTable() {
+    let result = createHeaderButtons();
+    if (result instanceof Left) return result;
+    result = createCells();
+    if (result instanceof Left) return result;
+    return new Right();
 }
 
 /**
- * @param {Event} event
- * @return {HTMLInputElement | null}
+ * @returns {Either}
  */
-function getCellElementByEvent(event) {
-    return /** @type {HTMLInputElement | null} */ (event.target);
+function createHeaderButtons() {
+    const headerRowElement = document.getElementById('table-header-row');
+    if (headerRowElement === null) return new Left(ERRORS.MISSING_TABLE_HEADER_ROW);
+    let thElement = document.createElement('th');
+    thElement.appendChild(createButtonElementWithText("#"));
+    headerRowElement.appendChild(thElement);
+    for (let i = 65; i <= 90; i++) {
+        thElement = document.createElement('th');
+        thElement.appendChild(createButtonElementWithText(String.fromCharCode(i)));
+        headerRowElement.appendChild(thElement);
+    }
+    return new Right();
+}
+
+/**
+ * @param {string} text
+ * @returns {HTMLButtonElement}
+ */
+function createButtonElementWithText(text) {
+    const buttonElement = document.createElement('button');
+    buttonElement.setAttribute('type', 'button');
+    buttonElement.textContent = text;
+    return buttonElement;
+}
+
+/**
+ * @returns {Either}
+ */
+function createCells() {
+    const headerRowElement = document.getElementById('table-body');
+    if (headerRowElement === null) return new Left(ERRORS.MISSING_TABLE_BODY);
+    for (let i = 1; i <= 30; i++) {
+        headerRowElement.appendChild(createTableRow(i));
+    }
+    return new Right();
+}
+
+/**
+ * @param {number} rowNumber
+ */
+function createTableRow(rowNumber) {
+    const tr = document.createElement('tr');
+    tr.appendChild(createCellElementWithChild(createButtonElementWithText(rowNumber.toString())));
+    for (let i = 1; i <= 26; i++) {
+        tr.appendChild(createCellElementWithChildAndClick(createSpanElement(), onCellClick));
+    }
+    return tr;
+}
+
+/**
+ * @param {HTMLElement} child
+ */
+function createCellElementWithChild(child) {
+    const td = document.createElement('td');
+    td.appendChild(child);
+    return td;
+}
+
+/**
+ * @param {HTMLElement} child
+ * @param {(this: GlobalEventHandlers, ev: MouseEvent) => any} onClick
+ */
+function createCellElementWithChildAndClick(child, onClick) {
+    const td = createCellElementWithChild(child);
+    td.onclick = onClick;
+    return td;
+}
+
+function createSpanElement() {
+    const spanElement = document.createElement('span');
+    return spanElement;
+}
+
+/**
+ * @param {MouseEvent} event
+ */
+function onCellClick(event) {
+    if (event.target === null) throw new Error('cell target is null');
+    if (!event.shiftKey)
+        clearAllSelections();
+    const td = /** @type {HTMLTableCellElement} */ (event.target);
+    td.className = 'selected';
+}
+
+function clearAllSelections() {
+    const tds = document.querySelectorAll('td');
+    tds.forEach(td => {
+        td.className = '';
+    });
 }
